@@ -33,6 +33,10 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
     super
 
     @format = 'plain'
+    @model ||= []
+    @airline ||= []
+    @city ||= []
+    @keywords ||= []
   end
 
   public
@@ -96,8 +100,17 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
       incident_h['date'] =  content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 5]
       incident_h['reason'] =  content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 6]
 
-      yield incident_h
+      if (@model.include? incident_h['model'] or @model.empty?) \
+	and (@airline.include? incident_h['airline'] or @airline.empty?) \
+	and (@city.include? incident_h['city'] or @city.empty?)
+ 
+	yield incident_h if @keywords.empty?
 
+	incident_h['reason'].split.each do |keyword|
+          yield incident_h if @keywords.include? keyword
+	end unless @keywords.empty?
+
+      end
     end
   end
 
