@@ -26,7 +26,9 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
   config :sincedb_path, :validate => :string
 
   # From where should the log be retrieved
-  config :start_position, :default => 'end'
+  config :start_position, :validate => :string,  :default => 'end'
+
+  current_id = ''
 
   public
   def initialize(params)
@@ -37,11 +39,24 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
     @airline ||= []
     @city ||= []
     @keywords ||= []
+    @current_id = @start_position if !['beginning', 'end'].include? @start_position
   end
 
   public
   def register
     @logger.info("Registering AvHerald input")
+
+    if @sincedb_path.nil?
+      if ENV["HOME"].nil?
+        @logger.error("No HOME environment variable set, I don't know where " \
+  		    "to keep track of the files I'm watching. Either set " \
+		    "HOME in your environment, or set sincedb_path in " \
+		    "in your logstash config for the file input with " \
+		    "path '#{@path.inspect}'")
+         raise
+       end
+      @sincedb_path = "#{ENV['HOME']}/.sincedb_avherald"
+     end
   end
 
   public
@@ -67,7 +82,7 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
         queue << e
       end
 
-      sleep 60
+      sleep 5
     end
   end
 
@@ -86,9 +101,12 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
 
     html_doc = Nokogiri::HTML(res.body)
     spans =  html_doc.xpath("//span[@class='headline_avherald']/../../..")
+
     incident_h = Hash.new
     spans.each do |incident|
       log = Nokogiri::HTML(incident.to_s)
+
+      break if log.xpath('//a/@href').to_s[/h?article=(.*)&opt=0/, 1].eql? @current_id
 
       incident_h['type'] = log.xpath('//img/@alt').to_s
       incident_h['avid'] = log.xpath('//a/@href').to_s[/h?article=(.*)&opt=0/, 1]
@@ -111,7 +129,8 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
 	end unless @keywords.empty?
 
       end
-    end
+    end unless @start_position.eql? 'end'
+    @current_id = Nokogiri::HTML(spans[0].to_s).xpath('//a/@href').to_s[/h?article=(.*)&opt=0/, 1]
   end
 
 end
