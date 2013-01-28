@@ -28,8 +28,6 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
   # From where should the log be retrieved
   config :start_position, :validate => :string,  :default => 'end'
 
-  current_id = ''
-
   public
   def initialize(params)
     super
@@ -57,6 +55,7 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
        end
       @sincedb_path = "#{ENV['HOME']}/.sincedb_avherald"
      end
+     @current_id = File.open(@sincedb_path) {|f| f.readline } if @start_position.eql? 'last'
   end
 
   public
@@ -131,6 +130,11 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
       end
     end unless @start_position.eql? 'end'
     @current_id = Nokogiri::HTML(spans[0].to_s).xpath('//a/@href').to_s[/h?article=(.*)&opt=0/, 1]
+  end
+
+  public
+  def teardown
+    File.open(@sincedb_path, 'w') { |f| f.write(@current_id) }	
   end
 
 end
