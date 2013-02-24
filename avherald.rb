@@ -136,8 +136,7 @@ class LogStash::Inputs::Avherald < LogStash::Inputs::Base
       incident_h['airline'] =  content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 1]
       incident_h['model'] = content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 2]
       incident_h['city'] = content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 4]
-      tmp_date = Date.parse content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 5] rescue nil
-      incident_h['date'] =  tmp_date.to_s
+      incident_h['date'] =  content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 5]
       incident_h['reason'] =  content.to_s[/(.*) ([A-Z0-9]*) (at|over|enroute|near) (.*) on (.*), (.*)/, 6]
 
       if (@model.include? incident_h['model'] or @model.empty?) \
